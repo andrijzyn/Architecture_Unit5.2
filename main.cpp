@@ -2,124 +2,162 @@
 #include <bitset>
 #include <vector>
 #include <iomanip>
-#include <limits>  // for numeric_limits
-#include <algorithm>  // for find()
+#include <limits>
+#include <algorithm>
+#include <numeric>
 
 using namespace std;
 
-// Helper function to ensure valid byte input
+constexpr int MAX_BYTE_VALUE = 255;
+const string RESET_COLOR = "\033[0m";
+const string RED_COLOR = "\033[31m";
+const string GREEN_COLOR = "\033[32m";
+const string LIGHT_BLUE_COLOR = "\033[34m";
+
+// Printing text in color
+void printColored(const string &text, const string &colorCode) {
+    cout << colorCode << text << RESET_COLOR;
+}
+
+// Checking and getting a valid byte
 int getValidByteInput() {
     int num;
-    cin >> num;
-    if (num > 255) {
-        num = num % 256;  // Modulo 256 for numbers larger than 255
-    }
-    if (cin.fail()) {
-        num = 130;  // Default value for invalid input
-        cin.clear();
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    }
-    return num;
-}
-
-// Helper function to print binary representation with fixed size (8 bits)
-void printBinary(int num, bool highlight = false) {
-    bitset<8> binary(num);
-    cout << (highlight ? "\033[31m" : "")  // Red color if highlight is true
-         << binary << "\033[0m";           // Reset color after
-}
-
-// Function to perform right cyclic shift while keeping specified elements fixed
-void cyclicRightShift(vector<int>& binaryArray, int shiftAmount, vector<int> fixedPositions) {
-    std::vector<int>::size_type size = binaryArray.size();
-    vector<int> tempArray(size);
-
-    // Copy elements to new positions with cyclic shift
-    for (std::vector<int>::size_type i = 0; i < size; ++i) {
-        if (find(fixedPositions.begin(), fixedPositions.end(), i + 1) == fixedPositions.end()) {
-            tempArray[(i + shiftAmount) % size] = binaryArray[i];
+    while (true) {
+        cin >> num;
+        if (cin.fail() || num < 0 || num > MAX_BYTE_VALUE) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            printColored("Invalid input. Please enter a number between 0 and 255.\n", RED_COLOR);
         } else {
-            tempArray[i] = binaryArray[i];  // Fixed elements stay in place
+            return num;
         }
     }
-    binaryArray = tempArray;
 }
 
-int main() {
-    // Get user input for two bytes
-    cout << "Enter two numbers between 0 and 255:" << endl;
-    int byte1 = getValidByteInput();
-    int byte2 = getValidByteInput();
+// Printing binary representation of a number
+void printBinary(const int num) {
+    cout << bitset<8>(num);
+}
 
-    // Output decimal and binary values of the bytes
-    cout << "Decimal input:" << endl;
+// Cyclic right shift while keeping fixed elements
+void cyclicRightShift(vector<int> &binaryArray, const int shiftAmount, const vector<int> &fixedPositions) {
+    const size_t size = binaryArray.size();
+    vector<int> tempArray(size);
+
+    // Save fixed positions
+    vector<int> fixedValues(fixedPositions.size());
+    for (size_t i = 0; i < fixedPositions.size(); ++i) {
+        fixedValues[i] = binaryArray[fixedPositions[i] - 1]; // -1 for indexing
+    }
+
+    // Perform cyclic shift
+    for (size_t i = 0; i < size; ++i) {
+        // If the position is fixed, keep its value
+        if (find(fixedPositions.begin(), fixedPositions.end(), i + 1) != fixedPositions.end()) {
+            tempArray[i] = binaryArray[i];
+        } else {
+            // Calculate new position for the shift
+            tempArray[(i + shiftAmount) % size] = binaryArray[i];
+        }
+    }
+
+    // Insert fixed values back
+    for (size_t i = 0; i < fixedPositions.size(); ++i) {
+        tempArray[fixedPositions[i] - 1] = fixedValues[i]; // -1 for indexing
+    }
+
+    // Update the original array
+    binaryArray = move(tempArray);
+}
+
+// Collecting user input
+void collectInput(int &byte1, int &byte2) {
+    printColored("Enter two numbers between 0 and 255:\n", LIGHT_BLUE_COLOR);
+    byte1 = getValidByteInput();
+    byte2 = getValidByteInput();
+}
+
+// Printing decimal values
+void printDecimalValues(const int byte1, const int byte2) {
+    printColored("Decimal input:\n", GREEN_COLOR);
     cout << "Byte 1: " << byte1 << " | Byte 2: " << byte2 << endl;
+}
 
-    cout << "Binary input:" << endl;
-    cout << "Byte 1: "; printBinary(byte1); cout << endl;
-    cout << "Byte 2: "; printBinary(byte2); cout << endl;
+// Printing binary values
+void printBinaryValues(const int byte1, const int byte2) {
+    printColored("Binary input:\n", GREEN_COLOR);
+    cout << "Byte 1: ";
+    printBinary(byte1);
+    cout << endl;
+    cout << "Byte 2: ";
+    printBinary(byte2);
+    cout << endl;
+}
 
-    // Combine both bytes into a 16-bit array
+// Creating combined 16-bit binary array
+vector<int> createBinaryArray(const int byte1, const int byte2) {
     vector<int> binaryArray(16);
-    bitset<8> bin1(byte1), bin2(byte2);
-    for (std::vector<int>::size_type i = 0; i < 8; ++i) {
+    const bitset<8> bin1(byte1);
+    const bitset<8> bin2(byte2);
+    for (size_t i = 0; i < 8; ++i) {
         binaryArray[i] = bin1[i];
         binaryArray[8 + i] = bin2[i];
     }
+    return binaryArray;
+}
 
-    // Print combined array, highlight positions 14 and 3
-    cout << "Combined 16-bit binary array:" << endl;
-    for (std::vector<int>::size_type i = 15; i < 16; --i) {
+// Printing combined binary array
+void printCombinedBinaryArray(const vector<int> &binaryArray) {
+    printColored("Combined 16-bit binary array:\n", GREEN_COLOR);
+    for (size_t i = 0; i < binaryArray.size(); ++i) {
         if (i == 13 || i == 2) {
-            cout << "\033[31m";  // Red for highlighted bits
+            cout << RED_COLOR;
         }
-        cout << binaryArray[i];
-        cout << "\033[0m";
-        if (i % 8 == 0) cout << " ";  // Separate bytes for readability
+        cout << binaryArray[i] << RESET_COLOR;
+        if (i == 7) cout << " "; // Byte separator
     }
     cout << endl;
+}
 
-    // Perform cyclic right shift by 2, keeping elements 14 and 3 in place
-    vector<int> fixedPositions = {14, 3};
-    cyclicRightShift(binaryArray, 2, fixedPositions);
-
-    // Split into two 8-bit segments and display
-    cout << "After cyclic shift (keeping bits 14 and 3 fixed):" << endl;
-    cout << "Byte 1: ";
-    for (std::vector<int>::size_type i = 7; i < 8; --i) {
-        if (i == 6 || i == 1) {
-            cout << "\033[31m";  // Red for bits 14 and 3
-        }
-        cout << binaryArray[i];
-        cout << "\033[0m";
-    }
-    cout << endl;
-
-    cout << "Byte 2: ";
-    for (std::vector<int>::size_type i = 15; i < 16; --i) {
+// Printing shifted binary array
+void printShiftedBinaryArray(const vector<int> &binaryArray) {
+    printColored("After cyclic shift (keeping bits 14 and 3 fixed):\n", GREEN_COLOR);
+    for (size_t i = 0; i < binaryArray.size(); ++i) {
         if (i == 13 || i == 2) {
-            cout << "\033[31m";  // Red for bits 14 and 3
+            cout << RED_COLOR;
         }
-        cout << binaryArray[i];
-        cout << "\033[0m";
+        cout << binaryArray[i] << RESET_COLOR;
+        if (i == 7) cout << " "; // Byte separator
     }
     cout << endl;
+}
 
-    // Convert back to decimal
-    int byte1Shifted = 0, byte2Shifted = 0;
-    for (std::vector<int>::size_type i = 0; i < 8; ++i) {
-        byte1Shifted |= (binaryArray[i] << i);
-        byte2Shifted |= (binaryArray[8 + i] << i);
-    }
+// Summing and printing the result
+void printSumOfShiftedBytes(const vector<int> &binaryArray) {
+    const int result = accumulate(binaryArray.begin(), binaryArray.end(), 0, [](const int acc, const int bit) {
+        return (acc << 1) | bit; // Left shift and append current bit
+    });
 
-    // Sum the bytes and display
-    int result = byte1Shifted + byte2Shifted;
-    cout << "Sum of shifted bytes:" << endl;
+    printColored("Sum of shifted bytes:\n", GREEN_COLOR);
     cout << "Decimal: " << result << endl;
+    cout << "Binary: " << bitset<16>(result) << endl;
+}
 
-    // Output result in binary with spaces between bytes
-    cout << "Binary: " << bitset<16>(result).to_string().substr(0, 8) << " "
-         << bitset<16>(result).to_string().substr(8) << endl;
+
+int main() {
+    int byte1, byte2;
+    collectInput(byte1, byte2);
+    printDecimalValues(byte1, byte2);
+    printBinaryValues(byte1, byte2);
+
+    vector<int> binaryArray = createBinaryArray(byte1, byte2);
+    printCombinedBinaryArray(binaryArray);
+
+    const vector<int> fixedPositions = {14, 3};
+    cyclicRightShift(binaryArray, 2, fixedPositions);
+    printShiftedBinaryArray(binaryArray);
+
+    printSumOfShiftedBytes(binaryArray);
 
     return 0;
 }
