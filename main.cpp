@@ -30,7 +30,7 @@ int getValidByteInput() {
             num = 130;
             break;
         } else {
-            num = (num > 0) ? (num > MAX_BYTE_VALUE ? MAX_BYTE_VALUE : num) : 130;
+            num = (num >= 0) ? (num > MAX_BYTE_VALUE ? MAX_BYTE_VALUE : num) : 130;
             break;
         }
     }
