@@ -24,14 +24,17 @@ int getValidByteInput() {
     int num;
     while (true) {
         cin >> num;
-        if (cin.fail() || num < 0 || num > MAX_BYTE_VALUE) {
+        if (cin.fail()) {
             cin.clear();
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            printColored("Invalid input. Please enter a number between 0 and 255.\n", RED_COLOR);
+            num = 130;
+            break;
         } else {
-            return num;
+            num = (num > 0) ? (num > MAX_BYTE_VALUE ? MAX_BYTE_VALUE : num) : 130;
+            break;
         }
     }
+    return num;
 }
 
 // Printing binary representation of a number
@@ -132,6 +135,34 @@ void printShiftedBinaryArray(const vector<int> &binaryArray) {
     cout << endl;
 }
 
+// Printing binary and decimal representation of individual bytes
+void printByteValues(const vector<int> &binaryArray) {
+    vector<int> byte1(binaryArray.begin(), binaryArray.begin() + 8);
+    vector<int> byte2(binaryArray.begin() + 8, binaryArray.end());
+
+    auto printWithRedFixedBits = [](const vector<int> &byte) {
+        for (size_t i = 0; i < byte.size(); ++i) {
+            if (i == 5 || i == 6) {
+                // Fixed bits in the original 16-bit array are 3rd and 14th, translating to 5th and 6th in the first byte
+                cout << RED_COLOR;
+            }
+            cout << byte[i] << RESET_COLOR;
+        }
+    };
+
+    printColored("New Byte 1:\n", GREEN_COLOR);
+    printWithRedFixedBits(byte1);
+    cout << " Decimal: " << accumulate(byte1.begin(), byte1.end(), 0, [](const int acc, const int bit) {
+        return (acc << 1) | bit; // Left shift and append current bit
+    }) << endl;
+
+    printColored("New Byte 2:\n", GREEN_COLOR);
+    printWithRedFixedBits(byte2);
+    cout << " Decimal: " << accumulate(byte2.begin(), byte2.end(), 0, [](const int acc, const int bit) {
+        return (acc << 1) | bit; // Left shift and append current bit
+    }) << endl;
+}
+
 // Summing and printing the result
 void printSumOfShiftedBytes(const vector<int> &binaryArray) {
     const int result = accumulate(binaryArray.begin(), binaryArray.end(), 0, [](const int acc, const int bit) {
@@ -141,6 +172,12 @@ void printSumOfShiftedBytes(const vector<int> &binaryArray) {
     printColored("Sum of shifted bytes:\n", GREEN_COLOR);
     cout << "Decimal: " << result << endl;
     cout << "Binary: " << bitset<16>(result) << endl;
+
+    if (bitset<16>(result).count() > 8) {
+        cout << bitset<16>(result).to_string().substr(0, 8) << " " << bitset<16>(result).to_string().substr(8) << endl;
+    } else {
+        cout << bitset<16>(result) << endl;
+    }
 }
 
 
@@ -157,6 +194,7 @@ int main() {
     cyclicRightShift(binaryArray, 2, fixedPositions);
     printShiftedBinaryArray(binaryArray);
 
+    printByteValues(binaryArray);
     printSumOfShiftedBytes(binaryArray);
 
     return 0;
