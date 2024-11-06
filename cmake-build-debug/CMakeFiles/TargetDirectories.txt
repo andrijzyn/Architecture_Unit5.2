@@ -1,3 +1,3 @@
-/home/andrijzyn/CLionProjects/untitled/Architecture_Unit5/2/cmake-build-debug/CMakeFiles/2.dir
-/home/andrijzyn/CLionProjects/untitled/Architecture_Unit5/2/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/andrijzyn/CLionProjects/untitled/Architecture_Unit5/2/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+C:/Users/Andrij/CLionProjects/Architecture_Unit5.2/cmake-build-debug/CMakeFiles/2.dir
+C:/Users/Andrij/CLionProjects/Architecture_Unit5.2/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/Andrij/CLionProjects/Architecture_Unit5.2/cmake-build-debug/CMakeFiles/rebuild_cache.dir

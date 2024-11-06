@@ -4,20 +4,27 @@
 #include <limits>
 #include <numeric>
 #include <string>
+#include <windows.h>
 
 using namespace std;
 
-const string RED_COLOR = "\033[31m";
-const string CYAN_COLOR = "\033[36m";
-constexpr int HL_1 = 14 - 1;
-constexpr int HL_2 = 3 - 1;
+void setConsoleColor(const int colorCode) {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleTextAttribute(hConsole, colorCode);
+}
+
+constexpr int RED_COLOR = FOREGROUND_RED | FOREGROUND_INTENSITY;
+constexpr int CYAN_COLOR = FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+constexpr int HIGHLIGHT_COLOR = FOREGROUND_GREEN | FOREGROUND_INTENSITY;
 
 string decimalToBinary(const int number) {
     return bitset<8>(number).to_string();
 }
 
-string color(const string &str, const string &color) {
-    return color + str + "\033[0m"; // ANSI escape code to reset color
+void color(const string &str, const int colorCode) {
+    setConsoleColor(colorCode);
+    cout << str;
+    setConsoleColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 }
 
 vector<int> getUserInput() {
@@ -28,18 +35,32 @@ vector<int> getUserInput() {
         while (true) {
             if (cin >> input) {
                 if (input < 0 || input > 255) {
-                    input = input % 256; // Handle overflow
+                    input %= 256; // Обробка перевищення 255
                 }
                 bytes[i] = input == 130 ? 130 : input;
                 break;
             }
             cin.clear();
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            bytes[i] = 130; // Default on incorrect input
+            bytes[i] = 130; // Значення за умовчанням при некоректному вводі
             break;
         }
     }
     return bytes;
+}
+
+int getHighlightIndex() {
+    int index;
+    cout << "Enter index to highlight (0-15): ";
+    while (true) {
+        if (cin >> index && index >= 0 && index < 16) {
+            break;
+        }
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "Invalid input. Please enter a number between 0 and 15: ";
+    }
+    return index;
 }
 
 vector<int> combineBytesToBinaryArray(const vector<int> &bytes) {
@@ -51,58 +72,71 @@ vector<int> combineBytesToBinaryArray(const vector<int> &bytes) {
     return binaryArray;
 }
 
-string getHighlightedArray(const vector<int> &array, int highlightIndex1, int highlightIndex2) {
-    string result;
-    for (int i = 0; i < 16; ++i) {
-        result += (i == highlightIndex1 || i == highlightIndex2)
-                      ? color(to_string(array[i]), RED_COLOR)
-                      : to_string(array[i]);
-        result += " "; // Добавляем пробел между элементами
+void printHighlightedArray(const vector<int> &array, int highlightIndex) {
+    for (int i = 0; i < array.size(); ++i) {
+        // Пропускаємо виділений індекс, перший і останній елементи
+        if (i == highlightIndex) {
+            color(to_string(array[i]), HIGHLIGHT_COLOR); // Выделяем указанный бит
+        } else if (i == 0 || i == array.size() - 1) {
+            color(to_string(array[i]), RED_COLOR); // Виділяємо крайні елементи
+        } else {
+            cout << array[i];
+        }
+        cout << " ";
     }
-    return result;
+    cout << endl;
 }
 
-vector<int> cyclicShiftArray(const vector<int> &binaryArray) {
+vector<int> cyclicShiftArray(const vector<int> &binaryArray, int highlightIndex) {
     vector<int> shiftedArray(16);
+    int shiftCount = 0;
+
     for (int i = 0; i < 16; ++i) {
-        shiftedArray[i] = (i == HL_1 || i == HL_2) ? binaryArray[i] : binaryArray[(i - 2 + 16) % 16];
+        int sourceIndex = i;
+        while (shiftCount < 2) {
+            sourceIndex = (sourceIndex - 1 + 16) % 16;
+            if (sourceIndex != highlightIndex && sourceIndex != 0 && sourceIndex != 15) {
+                shiftCount++;
+            }
+        }
+        shiftCount = 0;
+
+        if (i == highlightIndex || i == 0 || i == 15) {
+            shiftedArray[i] = binaryArray[i];
+        } else {
+            shiftedArray[i] = binaryArray[sourceIndex];
+        }
     }
+
     return shiftedArray;
 }
 
-string outputShiftedArray(const vector<int> &shiftedArray) {
-    string result;
-    for (const auto &bit: shiftedArray) result += to_string(bit) + " ";
-    result += "\n";
-    return result;
-}
-
-pair<vector<int>, vector<int> > splitAndOutputBytes(const vector<int> &shiftedArray) {
+void splitAndOutputBytes(const vector<int> &shiftedArray) {
     vector<int> firstByte(shiftedArray.begin(), shiftedArray.begin() + 8);
     vector<int> secondByte(shiftedArray.begin() + 8, shiftedArray.end());
 
-    cout << color("First byte: ", CYAN_COLOR);
+    color("First byte: ", CYAN_COLOR);
     for (const auto &bit: firstByte) cout << bit;
     cout << " (" << accumulate(firstByte.begin(), firstByte.end(), 0,
                                [](const int acc, const int bit) { return (acc << 1) | bit; })
             << ")" << endl;
 
-    cout << color("Second byte: ", CYAN_COLOR);
+    color("Second byte: ", CYAN_COLOR);
     for (const auto &bit: secondByte) cout << bit;
     cout << " (" << accumulate(secondByte.begin(), secondByte.end(), 0,
                                [](const int acc, const int bit) { return (acc << 1) | bit; }) << ")" << endl;
-
-    return {firstByte, secondByte};
 }
 
-void outputSumOfBytes(const vector<int> &firstByte, const vector<int> &secondByte) {
-    const int sum = accumulate(firstByte.begin(), firstByte.end(), 0,
-                               [](const int acc, const int bit) { return (acc << 1) | bit; }) +
-                    accumulate(secondByte.begin(), secondByte.end(), 0, [](const int acc, const int bit) {
-                        return (acc << 1) | bit;
-                    });
+void outputProductOfBytes(const vector<int> &firstByte, const vector<int> &secondByte) {
+    const int firstVal = accumulate(firstByte.begin(), firstByte.end(), 0,
+                                    [](const int acc, const int bit) { return (acc << 1) | bit; });
+    const int secondVal = accumulate(secondByte.begin(), secondByte.end(), 0,
+                                     [](const int acc, const int bit) { return (acc << 1) | bit; });
+    const int product = firstVal * secondVal;
 
-    cout << "Sum of bytes: " << sum << " (" << decimalToBinary(sum) << ")" << endl;
+    color("Product of bytes: ", CYAN_COLOR);
+    cout << product << " (" << bitset<16>(product).to_string().substr(0, 8) << " "
+            << bitset<16>(product).to_string().substr(8) << ")" << endl;
 }
 
 int main() {
@@ -112,13 +146,17 @@ int main() {
             << bytes[1] << " (" << decimalToBinary(bytes[1]) << ")" << endl;
 
     const vector<int> binaryArray = combineBytesToBinaryArray(bytes);
-    cout << "Combined binary array: " << getHighlightedArray(binaryArray, HL_1, HL_2) << endl;
+    cout << "Combined binary array: ";
+    int highlightIndex = getHighlightIndex();
+    printHighlightedArray(binaryArray, highlightIndex);
 
-    const vector<int> shiftedArray = cyclicShiftArray(binaryArray);
-    cout << "Array after cyclic shift right by 2: " << getHighlightedArray(shiftedArray, HL_1, HL_2) << endl; // And here
+    const vector<int> shiftedArray = cyclicShiftArray(binaryArray, highlightIndex);
+    cout << "Array after cyclic shift right by 2: ";
+    printHighlightedArray(shiftedArray, highlightIndex);
 
-    auto [firstByte, secondByte] = splitAndOutputBytes(shiftedArray);
-    outputSumOfBytes(firstByte, secondByte);
+    splitAndOutputBytes(shiftedArray);
+    outputProductOfBytes({shiftedArray.begin(), shiftedArray.begin() + 8},
+                         {shiftedArray.begin() + 8, shiftedArray.end()});
 
     return 0;
 }
