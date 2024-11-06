@@ -9,6 +9,8 @@ using namespace std;
 
 const string RED_COLOR = "\033[31m";
 const string CYAN_COLOR = "\033[36m";
+constexpr int HL_1 = 14 - 1;
+constexpr int HL_2 = 3 - 1;
 
 string decimalToBinary(const int number) {
     return bitset<8>(number).to_string();
@@ -24,8 +26,11 @@ vector<int> getUserInput() {
         int input;
         cout << "Enter byte " << (i + 1) << " (0-255): ";
         while (true) {
-            if (cin >> input && input >= 0 && input <= 255) {
-                bytes[i] = input;
+            if (cin >> input) {
+                if (input < 0 || input > 255) {
+                    input = input % 256; // Handle overflow
+                }
+                bytes[i] = input == 130 ? 130 : input;
                 break;
             }
             cin.clear();
@@ -46,26 +51,30 @@ vector<int> combineBytesToBinaryArray(const vector<int> &bytes) {
     return binaryArray;
 }
 
-void outputHighlightedArray(const vector<int> &array) {
-    cout << "Combined binary array: ";
+string getHighlightedArray(const vector<int> &array, int highlightIndex1, int highlightIndex2) {
+    string result;
     for (int i = 0; i < 16; ++i) {
-        cout << ((i == 13 || i == 2) ? color(to_string(array[i]), RED_COLOR) : to_string(array[i])) << " ";
+        result += (i == highlightIndex1 || i == highlightIndex2)
+                      ? color(to_string(array[i]), RED_COLOR)
+                      : to_string(array[i]);
+        result += " "; // Добавляем пробел между элементами
     }
-    cout << endl;
+    return result;
 }
 
 vector<int> cyclicShiftArray(const vector<int> &binaryArray) {
     vector<int> shiftedArray(16);
     for (int i = 0; i < 16; ++i) {
-        shiftedArray[i] = (i == 3 || i == 14) ? binaryArray[i] : binaryArray[(i + 2) % 16];
+        shiftedArray[i] = (i == HL_1 || i == HL_2) ? binaryArray[i] : binaryArray[(i - 2 + 16) % 16];
     }
     return shiftedArray;
 }
 
-void outputShiftedArray(const vector<int> &shiftedArray) {
-    cout << "Array after cyclic shift right by 2: ";
-    for (const auto &bit: shiftedArray) cout << bit << " ";
-    cout << endl;
+string outputShiftedArray(const vector<int> &shiftedArray) {
+    string result;
+    for (const auto &bit: shiftedArray) result += to_string(bit) + " ";
+    result += "\n";
+    return result;
 }
 
 pair<vector<int>, vector<int> > splitAndOutputBytes(const vector<int> &shiftedArray) {
@@ -74,7 +83,8 @@ pair<vector<int>, vector<int> > splitAndOutputBytes(const vector<int> &shiftedAr
 
     cout << color("First byte: ", CYAN_COLOR);
     for (const auto &bit: firstByte) cout << bit;
-    cout << " (" << accumulate(firstByte.begin(), firstByte.end(), 0, [](const int acc, const int bit) { return (acc << 1) | bit; })
+    cout << " (" << accumulate(firstByte.begin(), firstByte.end(), 0,
+                               [](const int acc, const int bit) { return (acc << 1) | bit; })
             << ")" << endl;
 
     cout << color("Second byte: ", CYAN_COLOR);
@@ -86,22 +96,26 @@ pair<vector<int>, vector<int> > splitAndOutputBytes(const vector<int> &shiftedAr
 }
 
 void outputSumOfBytes(const vector<int> &firstByte, const vector<int> &secondByte) {
-    const int sum = accumulate(firstByte.begin(), firstByte.end(), 0, [](const int acc, const int bit) { return (acc << 1) | bit; }) +
-                    accumulate(secondByte.begin(), secondByte.end(), 0, [](const int acc, const int bit) { return (acc << 1) | bit; });
+    const int sum = accumulate(firstByte.begin(), firstByte.end(), 0,
+                               [](const int acc, const int bit) { return (acc << 1) | bit; }) +
+                    accumulate(secondByte.begin(), secondByte.end(), 0, [](const int acc, const int bit) {
+                        return (acc << 1) | bit;
+                    });
 
     cout << "Sum of bytes: " << sum << " (" << decimalToBinary(sum) << ")" << endl;
 }
 
 int main() {
     const vector<int> bytes = getUserInput();
+
     cout << "Entered bytes: " << bytes[0] << " (" << decimalToBinary(bytes[0]) << "), "
             << bytes[1] << " (" << decimalToBinary(bytes[1]) << ")" << endl;
 
     const vector<int> binaryArray = combineBytesToBinaryArray(bytes);
-    outputHighlightedArray(binaryArray);
+    cout << "Combined binary array: " << getHighlightedArray(binaryArray, HL_1, HL_2) << endl;
 
     const vector<int> shiftedArray = cyclicShiftArray(binaryArray);
-    outputShiftedArray(shiftedArray);
+    cout << "Array after cyclic shift right by 2: " << getHighlightedArray(shiftedArray, HL_1, HL_2) << endl; // And here
 
     auto [firstByte, secondByte] = splitAndOutputBytes(shiftedArray);
     outputSumOfBytes(firstByte, secondByte);
