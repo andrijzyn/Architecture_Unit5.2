@@ -64,8 +64,13 @@ string getHighlightedArray(const vector<int> &array, int highlightIndex1, int hi
 
 vector<int> cyclicShiftArray(const vector<int> &binaryArray) {
     vector<int> shiftedArray(16);
-    for (int i = 0; i < 16; ++i) {
-        shiftedArray[i] = (i == HL_1 || i == HL_2) ? binaryArray[i] : binaryArray[(i - 2 + 16) % 16];
+    for (int i = 0, j = 0; i < 16; ++i) {
+        if (i == HL_1 || i == HL_2) {
+            shiftedArray[i] = binaryArray[i];
+        } else {
+            shiftedArray[i] = binaryArray[(j - 2 + 16) % 16];
+            ++j;
+        }
     }
     return shiftedArray;
 }
